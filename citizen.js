@@ -80,9 +80,9 @@ class Citizen {
 		this.sleeping = true
 		this.fainted = true
 		this.faintCountDown = 100
-		this.breath_max = 1.1
-		this.breath_vel = 0.001
-		this.saturation = 20
+		this.breath_max = 1.3
+		this.breath_vel = 0.005
+		this.saturation = 10
 	}
 
 	die () {
