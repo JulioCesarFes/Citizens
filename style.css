@@ -1,0 +1,25 @@
+* {
+	box-sizing: border-box;
+	margin: 0;
+}
+
+html {
+	width: 100vw;
+	height: 100vh;
+
+	display: grid;
+	place-items: center;
+}
+
+body {
+	width: 700px;
+	height: 700px;
+
+	position: relative;
+}
+
+canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+}

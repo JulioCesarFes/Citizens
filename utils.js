@@ -1,0 +1,1 @@
+function mapper(v, a, b, c, d) { return d + ((c - d) * (v - b) / (a - b)) }
