@@ -45,6 +45,8 @@ class Citizen {
 
 		this.fainted = false
 		this.faintCountDown = 100
+
+		this.rescue = false
 	}
 
 	setBoundaries(x1, y1, x2, y2) {
@@ -74,6 +76,8 @@ class Citizen {
 		this.breath_max = 1.03
 		this.breath_vel = 0.01
 		this.saturation = 40
+
+		Citizen.removeFainted(this)
 	}
 
 	faint () {
@@ -83,6 +87,8 @@ class Citizen {
 		this.breath_max = 1.3
 		this.breath_vel = 0.005
 		this.saturation = 10
+
+		Citizen.pushFainted(this)
 	}
 
 	die () {
@@ -146,6 +152,7 @@ class Citizen {
 
 		if (this.sleeping) return
 
+		this.searchFainted()
 		this.searchFood()
 		this.chosePath()
 	}
@@ -181,6 +188,28 @@ class Citizen {
 
 	addRotation (a) {
 		this.rotateTo(this.a + a)
+	}
+
+	searchFainted () {
+		let citizens = Citizen.fainted()
+
+		if (!citizens.length) return
+
+		let lastDistance
+		let lastFainted
+
+		for (let citizen of citizens) {
+			if (citizen.index == this.index) continue
+
+			let distance = this.distance(citizen.x, citizen.y)
+
+			if (typeof lastDistance == 'undefined' || distance < lastDistance) {
+				lastDistance = distance
+				lastFainted = citizen
+			}
+		}
+
+		this.rescue = lastFainted
 	}
 
 	searchFood () {
@@ -545,5 +574,29 @@ class Citizen {
 			if (last) citizen.following = last
 			last = citizen
 		}
+	}
+
+	static checkFainted () {
+		if (typeof this._fainted == 'undefined') this._fainted = {}
+	}
+
+	static fainted () {
+		this.checkFainted()
+		
+		return Object.values(this._fainted)
+	}
+
+	static pushFainted (citizen) {
+		this.checkFainted()
+		
+		this._fainted[citizen.index] = citizen
+	}
+
+	static removeFainted (citizen) {
+		this.checkFainted()
+		
+		if (typeof this._fainted[citizen.index] == 'undefined') return
+
+		delete this._fainted[citizen.index]
 	}
 }
