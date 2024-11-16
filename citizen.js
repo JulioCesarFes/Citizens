@@ -10,6 +10,7 @@ class Citizen {
 
 		this.hue = Math.random() * 360
 		this.color = `hsl(${ this.hue }, 40%, 60%)`
+		this.saturation = 40
 		this.lightness = 60
 
 		this.size = 30
@@ -41,6 +42,9 @@ class Citizen {
 		this.storedEnergy = 5
 
 		this.chaseFood = false
+
+		this.fainted = false
+		this.faintCountDown = 100
 	}
 
 	setBoundaries(x1, y1, x2, y2) {
@@ -57,7 +61,8 @@ class Citizen {
 		this.pin = false
 	}
 
-	sleep () { 
+	sleep () {
+		if (this.fainted) return
 		this.sleeping = true
 		this.breath_max = 1.2
 		this.breath_vel = 0.005
@@ -65,8 +70,19 @@ class Citizen {
 
 	wakeUp () {
 		this.sleeping = false
+		this.fainted = false
 		this.breath_max = 1.03
 		this.breath_vel = 0.01
+		this.saturation = 40
+	}
+
+	faint () {
+		this.sleeping = true
+		this.fainted = true
+		this.faintCountDown = 100
+		this.breath_max = 1.1
+		this.breath_vel = 0.001
+		this.saturation = 20
 	}
 
 	die () {
@@ -106,7 +122,7 @@ class Citizen {
 					this.storedEnergy -= 1
 					this.energy += 100
 				} else {
-					this.breathing = false
+					this.faint()
 				}
 			}
 		}
@@ -116,7 +132,7 @@ class Citizen {
 			this.sleepingTimer = 30
 		}
 
-		this.size = 10 * Math.log(this.storedEnergy)
+		this.size = 10 + Math.log(this.storedEnergy)
 		this.pointer_size = this.size * 1.4
 	}
 
@@ -303,6 +319,13 @@ class Citizen {
 			return
 		}
 
+		if (this.fainted) {
+			this.faintCountDown -= 1
+			if (this.faintCountDown <= 0) {
+				this.breathing = false
+			}
+		}
+
 		if (this.inhale) {
 			this.breath += this.breath_vel
 			if (this.breath > this.breath_max) this.breath = this.breath_max
@@ -315,7 +338,7 @@ class Citizen {
 	}
 
 	changeColor () {
-		this.color = `hsl(${ this.hue }, 40%, ${ mapper(this.breath, this.breath_min, this.breath_max, 50, 60) }%)`
+		this.color = `hsl(${ this.hue }, ${ this.saturation }%, ${ mapper(this.breath, this.breath_min, this.breath_max, 50, 60) }%)`
 	}
 
 	draw (ctx) {
