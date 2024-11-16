@@ -38,8 +38,8 @@ class Food {
 
 	static get_n_random(n) {
 		for (let i = 0; i < n; i++) {
-			let x = Math.random() * CANVAS_SIZE
-			let y = Math.random() * CANVAS_SIZE
+			let x = Math.random() * (CANVAS_SIZE * 0.5) + (CANVAS_SIZE * 0.25)
+			let y = Math.random() * (CANVAS_SIZE * 0.5) + (CANVAS_SIZE * 0.25)
 			new Food(x, y)
 		}
 	}

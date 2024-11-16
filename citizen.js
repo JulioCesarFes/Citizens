@@ -38,7 +38,7 @@ class Citizen {
 
 		this.following = false
 
-		this.energy = 300
+		this.energy = 100
 		this.storedEnergy = 5
 
 		this.chaseFood = false
@@ -47,6 +47,7 @@ class Citizen {
 		this.faintCountDown = 100
 
 		this.rescue = false
+		this.carrying = false
 	}
 
 	setBoundaries(x1, y1, x2, y2) {
@@ -68,6 +69,7 @@ class Citizen {
 		this.sleeping = true
 		this.breath_max = 1.2
 		this.breath_vel = 0.005
+		Citizen.removeFromChunk(this.chunkX, this.chunkY, this.index)
 	}
 
 	wakeUp () {
@@ -88,12 +90,23 @@ class Citizen {
 		this.breath_vel = 0.005
 		this.saturation = 10
 
+		this.rescue = false
+		this.carrying = false
+
 		Citizen.pushFainted(this)
+		Citizen.removeFromChunk(this.chunkX, this.chunkY, this.index)
+	}
+
+	heal () {
+		this.energy = 100
 	}
 
 	die () {
 		this.sleep()
+		this.saturation = 0
+		this.size = 7
 		this.breathing = false
+		Citizen.removeFainted(this)
 		Citizen.removeFromChunk(this.chunkX, this.chunkY, this.index)
 	}
 
@@ -109,11 +122,11 @@ class Citizen {
 
 	checkEnergyLevel () {
 		if (!this.breathing) {
-			if (this.size > 10) this.size -= 1
-			if (this.lightness > 30) this.lightness -= 1
-			this.color = `hsl(${ this.hue }, 40%, ${this.lightness}% )`
+			this.die()
 			return
 		}
+
+		if (this.fainted) return
 
 		if (this.sleeping) {
 			if (this.sleepingTimer > 0) {
@@ -143,14 +156,15 @@ class Citizen {
 	}
 
 	process () {
-		this.calcChunk()
 		this.breathe()
 		this.changeColor()
 		this.checkEnergyLevel()
 
 		if (!this.breathing) return
-
+		if (this.fainted) return
 		if (this.sleeping) return
+
+		this.calcChunk()
 
 		this.searchFainted()
 		this.searchFood()
@@ -191,6 +205,10 @@ class Citizen {
 	}
 
 	searchFainted () {
+		if (this.storedEnergy < 2) return
+		if (this.carrying) return
+		if (this.rescue) return
+
 		let citizens = Citizen.fainted()
 
 		if (!citizens.length) return
@@ -218,7 +236,6 @@ class Citizen {
 		let n = Math.floor(this.storedEnergy / 5)
 
 		let foods = Food.foodsNearByChunk(this.chunkX, this.chunkY, n)
-		// if (this.highlight) console.log(foods)
 		
 		let closestFood
 		let closestDistance
@@ -252,9 +269,18 @@ class Citizen {
 		food.getEaten()
 	}
 
+	carry (citizen) {
+		Citizen.removeFainted(citizen)
+		this.carrying = citizen
+	}
+
 	chosePath () {
 		let oldX = this.x
 		let oldY = this.y
+
+		this.v = 5
+		if (this.rescue) this.v = 10
+		if (this.carrying) this.v = 8
 
 		if (this.pin) {
 			let c1 = this.pin.x - this.x
@@ -264,6 +290,39 @@ class Citizen {
 
 			let d = Math.abs(Math.sqrt(c1*c1 + c2*c2))
 			if (d > this.size) this.move()
+
+		} else if (this.carrying) {
+			let c1 = 350 - this.x
+			let c2 = 350 - this.y
+			let a = Math.atan2(c2, c1)
+			this.rotateTo(a)
+
+			let d = Math.abs(Math.sqrt(c1*c1 + c2*c2))
+			if (d > TILE_SIZE) {
+				this.move()
+				this.carrying.x = this.x
+				this.carrying.y = this.y
+			
+			} else {
+				this.carrying.x = 350
+				this.carrying.y = 350
+				this.carrying.heal()
+				this.carrying.wakeUp()
+				this.carrying = false
+			}
+
+			if (!this.carrying.breathing) this.carrying = false
+
+		} else if (this.rescue) {
+			let c1 = this.rescue.x - this.x
+			let c2 = this.rescue.y - this.y
+			let a = Math.atan2(c2, c1)
+			this.rotateTo(a)
+
+			let d = Math.abs(Math.sqrt(c1*c1 + c2*c2))
+			if (d > this.size) this.move()
+			else this.carry(this.rescue)
+			this.rescue = false
 
 		} else if (this.chaseFood) {
 			let c1 = this.chaseFood.x - this.x
@@ -325,7 +384,12 @@ class Citizen {
 
 			if (d < this.size + citizen.size) {
 				let a = this.angle(citizen.x, citizen.y)
-				this.pushedFrom(a, this.size + citizen.size - d)
+
+				let newDistance = this.size + citizen.size - d
+
+				if (citizen.carrying) newDistance += citizen.size + this.size
+
+				this.pushedFrom(a, newDistance)
 			}
 		}
 	}
@@ -452,9 +516,14 @@ class Citizen {
 
 		let n = Math.floor(this.storedEnergy / 5)
 		ctx.save()
-		ctx.strokeStyle = 'lime'
-		// ctx.strokeRect(this.chunkX * TILE_SIZE, this.chunkY * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+		ctx.fillStyle = 'rgba(0, 255, 0, 0.03)'
+		ctx.fillRect((this.chunkX - n) * TILE_SIZE, (this.chunkY - n) * TILE_SIZE, TILE_SIZE * (n*2+1), TILE_SIZE * (n*2+1))
+		ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'
 		ctx.strokeRect((this.chunkX - n) * TILE_SIZE, (this.chunkY - n) * TILE_SIZE, TILE_SIZE * (n*2+1), TILE_SIZE * (n*2+1))
+		ctx.fillStyle = 'rgba(0, 255, 0, 0.1)'
+		ctx.beginPath()
+		ctx.arc(this.x, this.y, (n + 0.5) * TILE_SIZE, 0, V_360_DEG)
+		ctx.fill()
 		ctx.restore()
 
 		let citizens = Citizen.citizensNearByChunk(this.chunkX, this.chunkY)
@@ -463,14 +532,14 @@ class Citizen {
 			if (citizen.index == this.index) continue
 
 			ctx.save()
-			ctx.strokeStyle = 'blue'
+			ctx.strokeStyle = 'rgba(0, 0, 255, 0.03)'
 
 			let d = this.distance(citizen.x, citizen.y)
 			if (d < this.size * 2) {
-				ctx.strokeStyle = 'orange'
+				ctx.strokeStyle = 'red'
 			}
 
-			ctx.lineWidth = 10
+			ctx.lineWidth = 1
 			ctx.beginPath()
 			ctx.moveTo(citizen.x, citizen.y)
 			ctx.lineTo(this.x, this.y)
@@ -483,14 +552,14 @@ class Citizen {
 
 		for (let food of foods) {
 			ctx.save()
-			ctx.strokeStyle = 'blue'
+			ctx.strokeStyle = 'orange'
 
 			let d = this.distance(food.x, food.y)
 			if (d < this.size * 2) {
-				ctx.strokeStyle = 'orange'
+				ctx.strokeStyle = 'lime'
 			}
 
-			ctx.lineWidth = 10
+			ctx.lineWidth = 1
 			ctx.beginPath()
 			ctx.moveTo(food.x, food.y)
 			ctx.lineTo(this.x, this.y)

@@ -25,4 +25,9 @@ function tiles () {
 			is_dark_title = !is_dark_title
 		}
 	}
+
+	ctx.strokeStyle = 'skyblue'
+	ctx.beginPath()
+	ctx.arc(350, 350, TILE_SIZE, 0, V_360_DEG)
+	ctx.stroke()
 }

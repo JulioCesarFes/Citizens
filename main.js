@@ -15,7 +15,7 @@ let h = canvas.height = CANVAS_SIZE
 // ...
 
 Citizen.get_n_random(10)
-Food.get_n_random(7)
+Food.get_n_random(10)
 // new Citizen(w/2, h/2)
 
 Citizen.setBoundaries(0, 0, w, h)
@@ -49,8 +49,6 @@ function draw() {
 function process() {
 	Citizen.process()
 	Food.process()
-
-	Citizen.citizens[0].highlight = true
 }
 
 // ...
